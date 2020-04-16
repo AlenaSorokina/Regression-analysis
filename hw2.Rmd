@@ -1,0 +1,158 @@
+---
+title: "HW2"
+author: "Alena Sorokina"
+date: "19 02 2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Problem 1
+```{r}
+library(faraway)
+
+fullmodel=lm(total~expend+ratio+salary, data=sat) 
+summary(fullmodel)
+
+
+
+
+```
+
+To test the null hypothesis H0: salary is irrelevant we can use the t-test from the summary of the model. Since the p-value of b(salary) is 0.0667 > 0.05 (95% confidence), we fail to reject H0, which indicates that the salary variable is not useful in explaining the variation in total score. 
+
+To test the null hypothesis H0: salary, ratio and expend  are irrelevant we can use the F-statistic: 4.066 on 3 and 46 DF from the summary of the model. Since the p-value is 0.01209 < 0.05 (95% confidence), we reject H0, which indicates that the salary, ratio and expend variables together are useful in explaining the variation in total score. 
+
+
+```{r}
+
+new_fullmodel=lm(total~expend+ratio+salary+takers, data=sat) 
+summary(new_fullmodel)
+
+
+```
+To test the null hypothesis H0: takers variable is irrelevant we can use the t-test from the summary of the model. Since the p-value of b(takers) is 2.61e-16 < 0.05 (95% confidence), we reject H0, which indicates that the takers variable is useful in explaining the variation in total score. 
+
+```{r}
+
+reduced_model=lm(total~expend+ratio+salary, data=sat) 
+summary(reduced_model)
+
+anova(reduced_model, new_fullmodel)
+
+summary(new_fullmodel)$coef
+
+summary(new_fullmodel)$coef[5,3]^2  # t-stat^2 = F-stat
+
+```
+
+After comparing full and reduced models using F-test, we canconclude the same. We use the F-statistic: 157.74 on 1 and 46 DF from the summary of the model. Since the p-value is 2.607e-16 < 0.05 (95% confidence), we reject H0, which indicates that the takers variable is useful in explaining the variation in total score.  We computationally showed that F-test is the same as t-test. 
+
+
+###Problem 2
+```{r}
+
+fullmodel1=lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate) 
+summary(fullmodel1)
+
+confint(fullmodel1, 'age', level=0.90)
+confint(fullmodel1, 'age', level=0.95)
+
+reduced_model1=lm(lpsa~lcavol+lweight+svi, data=prostate) 
+summary(reduced_model1)
+
+anova(reduced_model1, fullmodel1)
+
+library(ellipse)
+
+library(ggplot2)
+
+CR95 = ellipse(fullmodel1, c(5,4))
+
+dim(CR95)
+
+head(CR95)
+
+myCR = rbind(CR95);
+myCR = data.frame(myCR); 
+names(myCR) = c("pop15","pop75"); 
+myCR[, 'level']=as.factor(c(rep(0.95, dim(CR95)[1])));
+
+
+ggplot(data=myCR, aes(x=pop15, y=pop75, colour=level)) + 
+  geom_path(aes(linetype=level), size=1.5) + 
+  geom_point(x=coef(fullmodel1)[2], y=coef(fullmodel1)[3], shape=3, size=3, colour='red') + 
+  geom_point(x=0, y=0, shape=1, size=3, colour='red') 
+
+
+n.iter = 2000; 
+fstats = numeric(n.iter);
+for(i in 1:n.iter){
+   newprostate=prostate;
+    newprostate[,c(4)]=prostate[sample(97),c(4)];
+    ge = lm(lpsa ~., data=newprostate);
+    fstats[i] = summary(ge)$fstat[1]
+}
+length(fstats[fstats > summary(fullmodel1)$fstat[1]])/n.iter
+
+```
+
+a)The confidence interval for variable age at 0.95 level is wider than for 0.90. 
+
+b)Since p-value is 0.2167 > 0.05, we fail to reject H0(age, lbph,lcp, gleason,pgg45= 0), which indicates that these variables are signinficant in our model. Taking into account adj R-squared value, the first model is preferable. 
+
+c) We plot the confidence region for (age, lbph), which is an ellipsoid centered at the LS estimate of their coefficients.
+
+Using the duality of Confidence region/interval and hypothesis test, we reject the hypothesis based on whether the point (0,0) is inside the ellipsoid or not. Since (0,0) is inside the ellisoid, we fail to reject the null hypothesis
+
+d) Permutation test statistics = 0.07 < 0.05 
+
+###Problem 3
+
+```{r}
+fullmodel2=lm(Distance~RStr+LStr+RFlex+LFlex, data=punting)
+summary(fullmodel2)
+
+reducedmodel2=lm(Distance~I(RStr+LStr)+RFlex+LFlex, data=punting)
+
+anova(reducedmodel2, fullmodel2)
+
+reducedmodel5=lm(Distance~I(RStr+LStr), data=punting)
+fullmodel5 = lm(Distance~RStr+LStr, data=punting)
+
+anova(reducedmodel5, fullmodel5)
+
+
+```
+a) None of the predictors is significant at 5% level 
+
+b) To test the null hypothesis H0: RStr, LStr, RFlex and LFlex  are irrelevant we can use the F-statistic: 5.59 on 4 and 8 DF from the summary of the model. Since the p-value is 0.01902 < 0.05 (95% confidence), we reject H0, which indicates that the RStr, LStr, RFlex and LFlex variables together are useful in explaining the variation in distance. 
+
+c) To test H0: whether RStr and LSrt have the same effect, we can use F test. Since 0.468 > 0.05, we fail to reject H0. 
+
+
+###Problem 5
+
+```{r}
+fullmodel4=lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate) 
+summary(fullmodel4)
+
+predict(fullmodel4,newdata=data.frame(lcavol=1.44692, lweight=3.62301,age=65, lbph= 0.3001, svi=0, lcp=-0.79851, gleason=7, pgg45=15), interval="confidence")
+
+predict(fullmodel4,newdata=data.frame(lcavol=1.44692, lweight=3.62301,age=20, lbph= 0.3001, svi=0, lcp=-0.79851, gleason=7, pgg45=15), interval="confidence")
+
+
+reduced_model4=lm(lpsa~lcavol+lweight+svi, data=prostate) 
+
+predict(reduced_model4,newdata=data.frame(lcavol=1.44692, lweight=3.62301,age=20, lbph= 0.3001, svi=0, lcp=-0.79851, gleason=7, pgg45=15), interval="confidence")
+
+
+```
+
+b) CIs or PIs get wider as we move away from the training data. Since age = 20 is non-typical value for the training data, CI gets wider.
+c) After removing seveall predictors that are not significant
+at the 5% level, the confidence interval for the new data prediction gets narrower, which is preferable. 

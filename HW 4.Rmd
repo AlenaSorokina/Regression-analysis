@@ -1,0 +1,74 @@
+---
+title: "HW 4"
+author: "Alena Sorokina"
+date: "30 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Problem 1
+```{r}
+library(faraway)
+library(lmtest)
+
+model1 = lm(colonies ~ log(dose+1), data = salmonella)
+plot(colonies ~ log(dose+1), data = salmonella); abline(coef(model1));
+model2 = lm(colonies ~ factor(log(dose+1)), data = salmonella)
+anova(model1,model2)
+
+```
+We test for the lack of fit, with H0: there is no lack of fit and Ha: there is a lack of fit. Since p-value = 0.1342 >0.05, we fail to reject the null hypothesis, and we can conlude that there is no lack of fit. 
+
+##Problem 2
+```{r}
+library(faraway)
+library(lmtest)
+
+g1 = lm(flux~ time, data = gammaray)
+summary(g1)
+plot(flux~ time, data = gammaray); abline(coef(g1));
+g2 = lm(log(flux)~ log(time), data = gammaray)
+summary(g2)
+abline(coef(g2));
+
+bptest(g2)
+
+g3 = lm(log(flux)~ log(time), data = gammaray, weights=1/abs(log(error)))
+
+summary(g3)
+
+
+```
+Errors in the dataset are the measurment errors for the flux variable. From the plot, we can see that the relationships between the predictor and responce are nonlinear. Let's consider log transformation. We can see that after the transformation the fit is significantly improved.  
+
+Let's now check the variance of errors. From the BP-test, with H0: homokedasticity (constant var of errors). The p-value from BP-test is  0.007147< 0.05, so we reject the null hypothesis => the variance of errors is nonconstant.  
+We should apply some WLS transformation. We can use the measurment errors to define the the weights, weights should be inversely proportional to the measurment errors. We log transform the errors as well. 
+
+
+##Problem 3
+```{r}
+library(faraway)
+library(lmtest)
+
+
+g=lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate) 
+summary(g)
+x = model.matrix(g)[,-1]
+e = eigen (t(x) %*% x)
+e$val
+sqrt(e$val[1]/e$val)
+
+round(cor(prostate), 3)
+
+vif (x)
+
+```
+a. To find the condition number, examine the eigenvalues of XTX, where l1 is the largest eigenvalue with the others in decreasing order. Relatively small eigenvalues indicate a problem. The condition
+number is defined as k = sqrt(l1/lp), where k>30 is considered large. There is a wide range in the eigenvalues and 6 condition numbers are large. This means that problems are being caused by more than just one linear combination.
+
+b. We examine the correlation matrix between the predictors to look at pairwise correlation. There are several large pairwise correlations both between predictors and between predictors and the response. For example (lpsa, lcavol), (svi, lcp), (lcp, lcavol),(lcp, pgg45), (gleason, pgg45). 
+
+c. We compute the VIF (Variance inflation factor). The VIF estimates how much the variance of a regression coefficient is inflated due to multicollinearity in the model. All of the obtained values are less then 4, which means that there is not so much variance inflation => there is a mild-moderate multicollinearity between the predictors.

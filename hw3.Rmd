@@ -1,0 +1,343 @@
+---
+title: "HW 3"
+author: "Alena Sorokina"
+date: "12 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Problem 1
+a. Check for const variance
+```{r}
+library(faraway)
+library(lmtest)
+
+
+g=lm(total~expend+ratio+salary+takers, data=sat) 
+summary(g)
+plot(fitted(g),residuals(g),xlab="Fitted",ylab="Residuals")
+abline (h=0)
+
+bptest(g)
+
+
+```
+
+From the residuals vs. fitted plot we can see that variance of the residuals is almost constant. However, to be completely sure we should conduct Studentized Breusch-Pagan test with H0: homokedasticity (constant var of errors). 
+The p-value from BP-test is 0.7066, so we fail to reject the null hypothesis => we can assume that the variance of errors is constant. 
+
+b. Check for normality 
+```{r}
+
+qqnorm (residuals (g), ylab="Residuals")
+qqline (residuals (g))
+hist (residuals (g))
+shapiro.test (residuals (g))
+
+```
+
+From the plots (QQ-plot and histogram) I can say that the residuals are normally distributed. To be sure, I conducted Shapiro-Wilk normality test, where H0: residuals are normal vs Ha: residuals violate the normality assumption. Since p-value of SW-test is 0.4304 > 0.05, one can conclude that residuals are normally distributed. 
+
+c. Check for large leverage points 
+```{r}
+ginf = influence (g) 
+ginf$hat
+sum (ginf$hat)
+
+states <- row.names (sat)
+halfnorm(ginf$hat, labs = states, ylab = "Leverages")
+qqnorm(rstandard(g))
+abline(0,1)
+
+```
+
+California and Utah are the states with the most extreme leverage. 
+
+d. Check for outliers
+```{r}
+stud <- rstudent(g)
+stud[which.max(abs(stud))]
+
+qt (.05/(50*2), 44)
+
+```
+
+Since -3.12 is greater than -3.52, we conclude that West Virginia is an outlier.
+
+
+e. Check for influential points 
+```{r}
+cook = cooks.distance(g)
+halfnorm (cook, 3, labs=states, ylab="Cook's
+distances")
+g1 <- lm(total ~ expend + salary + ratio + takers, data = sat, subset = (cook < max(cook)))
+summary(g1)
+summary(g)
+
+plot(dfbeta(g)[,2],ylab = "Change in expend coef")
+abline(h=0)
+
+```
+
+We now exclude the datapoint with the largest Cook's distance (Utah) and see how the fit changes. Among other changes, we can see that the expend coefficient changed significantly. We do not like our estimates to be so sensitive to the presence of just one country. It would be rather tedious to leave out each country in turn, so we examine the leaveout-one differences in the coefficients. 
+
+f. Check the structure of the relationship between the predictors and the response.
+```{r}
+g <- lm(total ~ expend + salary + ratio + takers, data = sat)
+summary(g)
+
+r.yexpend = lm(total ~ salary + ratio + takers, data = sat)$res;
+r.expend = lm(expend ~ salary + ratio + takers, data=sat)$res;
+tmp1=lm(r.yexpend ~ r.expend); summary(tmp1)
+
+r.ysalary = lm(total ~ expend + ratio + takers, data = sat)$res;
+r.salary = lm(salary ~ expend + ratio + takers, data=sat)$res;
+tmp2=lm(r.ysalary ~ r.salary); summary(tmp2)
+
+r.yratio = lm(total ~ salary + expend + takers, data = sat)$res;
+r.ratio = lm(ratio ~ salary + expend + takers, data=sat)$res;
+tmp3=lm(r.yratio ~ r.ratio); summary(tmp3)
+
+r.ytakers = lm(total ~ salary + ratio + expend, data = sat)$res;
+r.takers = lm(takers ~ salary + ratio + expend, data=sat)$res;
+tmp4=lm(r.ytakers ~ r.takers); summary(tmp4)
+
+
+par(mfrow=c(2,2))
+plot(r.expend, r.yexpend, xlab="expend residuals", ylab="total residuals"); abline(tmp1)
+plot(r.salary, r.ysalary, xlab="salary residuals", ylab="total residuals"); abline(tmp2)
+plot(r.ratio, r.yratio, xlab="ratio residuals", ylab="total residuals"); abline(tmp3)
+plot(r.takers, r.ytakers, xlab="takers residuals", ylab="total residuals"); abline(tmp4)
+```
+
+We remove the effect of each variable and fit a regression on the residuals. The slope for the regression lines fitted to the residuals after removing the effect of each variable one-at-a-time, is the same as the regression coefficient for that variable in the full model.
+
+##Problem 2
+a. Check for const variance
+```{r}
+library(faraway)
+library(lmtest)
+
+
+g=lm(gamble ~sex+status+income+verbal, data=teengamb) 
+summary(g)
+plot(fitted(g),residuals(g),xlab="Fitted",ylab="Residuals")
+abline (h=0)
+bptest(g)
+
+
+```
+
+From the residuals vs. fitted plot we can see that variance of the residuals does not seem constant: there is an increasing variance of the error with larger values for the response and there seems to be nonlinear structure in the residuals. However, to be completely sure we should conduct Studentized Breusch-Pagan test with H0: homokedasticity (constant var of errors). 
+The p-value from BP-test is 0.1693 >0.05 , so we fail to reject the null hypothesis => we can assume that the variance of errors is constant.
+
+b. Check for normality 
+```{r}
+
+qqnorm (residuals (g), ylab="Residuals")
+qqline (residuals (g))
+hist (residuals (g))
+shapiro.test (residuals (g))
+
+```
+
+From the plots (QQ-plot and histogram) I can say that there are issues with heavy tails in the data. To be sure, I conducted Shapiro-Wilk normality test, where H0: residuals are normal vs Ha: residuals violate the normality assumption. Since p-value of SW-test is < 0.05, one can conclude that residuals are not normally distributed, which comfirms my assumption from the plots. 
+
+c. Check for large leverage points 
+```{r}
+ginf = influence (g) 
+ginf$hat
+sum (ginf$hat)
+
+cases <- row.names (teengamb)
+halfnorm(ginf$hat, labs = cases, ylab = "Leverages")
+qqnorm(rstandard(g))
+abline(0,1)
+
+```
+
+We can see from the plot that cases 42 and 35 are the most extreme in leverage.
+
+d. Check for outliers
+```{r}
+stud <- rstudent(g)
+stud[which.max(abs(stud))]
+
+qt (.05/(50*2), 44)
+
+```
+
+Since 6.016116 is greater than -3.52, we conclude that case 24 is an outlier.
+
+
+e. Check for influential points 
+```{r}
+cook = cooks.distance(g)
+halfnorm (cook, 3, labs=cases, ylab="Cook's
+distances")
+g1 <- lm(gamble ~sex+status+income+verbal, data=teengamb, subset = (cook < max(cook)))
+summary(g1)
+summary(g)
+
+plot(dfbeta(g)[,3],ylab = "Change in status coef")
+abline(h=0)
+
+```
+
+We now exclude the datapoint with the largest Cook's distance (24) and see how the fit changes. Among other changes, we can see that the status coefficient changed significantly.
+
+f. Check the structure of the relationship between the predictors and the response.
+```{r}
+g <- lm(gamble ~ sex + status + income + verbal, data = teengamb)
+summary(g)
+
+r.ysex = lm(gamble ~ status + income + verbal, data = teengamb)$res;
+r.sex = lm(sex ~ status + income + verbal, data=teengamb)$res;
+tmp1=lm(r.ysex ~ r.sex); summary(tmp1)
+
+r.ystatus = lm(gamble ~ sex + income + verbal, data = teengamb)$res;
+r.status = lm(status ~ sex + income + verbal, data = teengamb)$res;
+tmp2=lm(r.ystatus ~ r.status); summary(tmp2)
+
+r.yincome = lm(gamble ~ sex + status + verbal, data = teengamb)$res;
+r.income = lm(income ~ sex + status + verbal, data = teengamb)$res;
+tmp3=lm(r.yincome ~ r.income); summary(tmp3)
+
+r.yverbal = lm(gamble ~ sex + status + income, data = teengamb)$res;
+r.verbal = lm(verbal ~ sex + status + income, data = teengamb)$res;
+tmp4=lm(r.yverbal ~ r.verbal); summary(tmp4)
+
+
+par(mfrow=c(2,2))
+plot(r.sex, r.ysex, xlab="sex residuals", ylab="gamble residuals"); abline(tmp1)
+plot(r.status, r.ystatus, xlab="status residuals", ylab="gamble residuals"); abline(tmp2)
+plot(r.income, r.yincome, xlab="income residuals", ylab="gamble residuals"); abline(tmp3)
+plot(r.verbal, r.yverbal, xlab="verbal residuals", ylab="gamble residuals"); abline(tmp4)
+```
+
+We remove the effect of each variable and fit a regression on the residuals. The slope for the regression lines fitted to the residuals after removing the effect of each variable one-at-a-time, is the same as the regression coefficient for that variable in the full model.
+
+The relationship between income and the gamble partial residual is basically linear but the variance of the error increases with income.
+
+##Problem 3
+a. Check for const variance
+```{r}
+library(faraway)
+library(lmtest)
+
+
+g=lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate) 
+summary(g)
+plot(fitted(g),residuals(g),xlab="Fitted",ylab="Residuals")
+abline (h=0)
+
+bptest(g)
+
+
+```
+
+From the residuals vs. fitted plot we can see that variance of the residuals is almost constant (they are equally distributed around zero). However, to be completely sure we should conduct Studentized Breusch-Pagan test with H0: homokedasticity (constant var of errors).
+The p-value from BP-test is  0.2594 >0.05, so we fail to reject the null hypothesis => we can assume that the variance of errors is constant. 
+
+b. Check for normality 
+```{r}
+
+qqnorm (residuals (g), ylab="Residuals")
+qqline (residuals (g))
+hist (residuals (g))
+shapiro.test (residuals (g))
+
+```
+
+From the plots (QQ-plot and histogram) I can say that the residuals are normally distributed. To be sure, I conducted Shapiro-Wilk normality test, where H0: residuals are normal vs Ha: residuals violate the normality assumption. Since p-value of SW-test is  0.7721 > 0.05, one can conclude that residuals are normally distributed. 
+
+c. Check for large leverage points 
+```{r}
+ginf = influence (g) 
+ginf$hat
+sum (ginf$hat)
+
+pat <- row.names (prostate)
+halfnorm(ginf$hat, labs = pat, ylab = "Leverages")
+qqnorm(rstandard(g))
+abline(0,1)
+
+```
+
+We can see from the plot that cases 41 and 32 are the most extreme in leverage.
+
+d. Check for outliers
+```{r}
+stud <- rstudent(g)
+stud[which.max(abs(stud))]
+
+qt (.05/(50*2), 44)
+
+```
+Since -2.61698 is greater than -3.52, we conclude that case 39 is an outlier.
+
+e. Check for influential points 
+```{r}
+cook = cooks.distance(g)
+halfnorm (cook, 3, labs=pat, ylab="Cook's distances")
+g1 <- lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate, subset = (cook < max(cook)))
+summary(g1)
+summary(g)
+
+
+```
+
+The datapoints with the largest Cook's distance are cases 69, 47, 32. 
+f. Check the structure of the relationship between the predictors and the response.
+```{r}
+g <- lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate)
+summary(g)
+
+r.ylcavol = lm(lpsa~lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+r.lcavol = lm(lcavol~lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+tmp1=lm(r.ylcavol ~ r.lcavol); summary(tmp1)
+
+r.ylweight = lm(lpsa~lcavol+age+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+r.lweight = lm(lweight~lcavol+age+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+tmp2=lm(r.ylweight ~ r.lweight); summary(tmp2)
+
+r.yage = lm(lpsa~lcavol+lweight+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+r.age = lm(age ~lpsa+lcavol+lweight+lbph+svi+lcp+gleason+pgg45, data=prostate)$res;
+tmp3=lm(r.yage ~ r.age); summary(tmp3)
+
+r.ylbph = lm(lpsa~lcavol+lweight+age+svi+lcp+gleason+pgg45, data=prostate)$res;
+r.lbph = lm(lbph~lcavol+lweight+age+svi+lcp+gleason+pgg45, data=prostate)$res;
+tmp4=lm(r.ylbph ~ r.lbph); summary(tmp4)
+
+r.ysvi = lm(lpsa~lcavol+lweight+age+lbph+lcp+gleason+pgg45, data=prostate)$res;
+r.svi = lm(svi~lcavol+lweight+age+lbph+lcp+gleason+pgg45, data=prostate)$res;
+tmp5=lm(r.ysvi ~ r.svi); summary(tmp5)
+
+r.ylcp = lm(lpsa~lcavol+lweight+age+lbph+svi+gleason+pgg45, data=prostate)$res;
+r.lcp = lm(lcp~lcavol+lweight+age+svi+lbph+gleason+pgg45, data=prostate)$res;
+tmp6=lm(r.ylcp ~ r.lcp); summary(tmp6)
+
+r.ygleason = lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+pgg45, data=prostate)$res;
+r.gleason = lm(gleason~lcavol+lweight+age+svi+lcp+lbph+pgg45, data=prostate)$res;
+tmp7=lm(r.ygleason ~ r.gleason); summary(tmp7)
+
+r.ypgg45 = lm(lpsa~lcavol+lweight+age+lbph+svi+lcp+gleason, data=prostate)$res;
+r.pgg45 = lm(pgg45~lcavol+lweight+age+svi+lcp+gleason+lbph, data=prostate)$res;
+tmp8=lm(r.ypgg45 ~ r.pgg45); summary(tmp8)
+
+par(mfrow=c(2,4))
+plot(r.lcavol, r.ylcavol, xlab="lcavol residuals", ylab="lpsa residuals"); abline(tmp1)
+plot(r.lweight, r.ylweight, xlab="lweight residuals", ylab="lpsa residuals"); abline(tmp2)
+plot(r.age, r.yage, xlab="age residuals", ylab="lpsa residuals"); abline(tmp3)
+plot(r.lbph, r.ylbph, xlab="lbph residuals", ylab="lpsa residuals"); abline(tmp4)
+plot(r.svi, r.ysvi, xlab="svi residuals", ylab="lpsa residuals"); abline(tmp5)
+plot(r.lcp, r.ylcp, xlab="lcp residuals", ylab="lcp residuals"); abline(tmp6)
+plot(r.gleason, r.ygleason, xlab="gleason residuals", ylab="lpsa residuals"); abline(tmp7)
+plot(r.pgg45, r.ypgg45, xlab="pgg45 residuals", ylab="lpsa residuals"); abline(tmp8)
+```
+
+We remove the effect of each variable and fit a regression on the residuals. The slope for the regression lines fitted to the residuals after removing the effect of each variable one-at-a-time, is the same as the regression coefficient for that variable in the full model.
+

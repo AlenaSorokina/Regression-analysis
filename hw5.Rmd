@@ -1,0 +1,118 @@
+---
+title: "HW5"
+author: "Alena Sorokina"
+date: "06 04 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##Problem 1
+```{r}
+library(faraway)
+library(lmtest)
+
+model1 = lm(temp ~ year, data = aatemp)
+plot(temp ~ year, data = aatemp); abline(coef(model1));
+summary(model1)
+
+
+plot(temp[-1]~temp[-length(temp)], data = aatemp);
+model2= lm(temp[-1]~temp[-length(temp)], data = aatemp);
+abline(model2);
+summary(model2);
+
+mod3=lm(temp~poly(year,10),data=aatemp)
+summary(mod3)
+mod4=lm(temp~poly(year,9),data=aatemp)
+summary(mod4)
+mod5=lm(temp~poly(year,5),data=aatemp)
+summary(mod5)
+
+par(mfrow=c(1,1))
+plot(temp ~ year, data = aatemp);
+lines (aatemp$year, fitted(mod5), lwd=2)
+
+predict(mod5,data.frame(year=2020))
+
+library (splines)
+m=6;
+myknots= 2*(1:m)/(m+1)
+myknots
+
+f=bs(aatemp$year,knots=myknots, intercept=TRUE)
+
+gs = lm (aatemp$temp ~ f)
+matplot (aatemp$year, f, type="l")
+matplot (aatemp$year, cbind (aatemp$temp, gs$fit),type="pl",ylab="y",pch=18)
+
+
+```
+
+a) From the plot of the data and plot of the linear fit, we could say that there is very week or no linear trend. The adj R^2 from the linear fit is only  0.07727, which indicates the lack of fit => no linear trend. 
+
+b) If we plot the temperature of some year vs the temperature of the previous year, it seems like there is some positive correlation. However, from the model summary, it doesn't seem significant and thus does not change my opinion about the trend in a. 
+
+c) Firstly we fit a polynimial model with degree 10, and then we use a backward illumination. We stop on d = 5, as the highest degree term is significant. We use this model to predict temp in 2020, and it gives us 60.07774. 
+
+d) It seems that cubic splin fits better than polynomial - it doesn't overfit the data, which is useful for extrapolation (prediction). 
+
+
+
+##Problem 2
+```{r}
+library(faraway)
+library(lmtest)
+
+
+model1 = lm(mortality ~ region*income*oil, data = infmort)
+plot(mortality ~ region*income*oil, data = infmort);
+
+plot(mortality~income,pch=as.character(oil),infmort)
+plot(mortality~income,pch=as.numeric(region),infmort)
+
+
+summary(model1)
+plot(model1)
+anova(model1)
+
+model2 = lm(log(mortality) ~ region*income*oil, data = infmort)
+summary(model2)
+plot(model2)
+plot(log(mortality) ~ region*income*oil, data = infmort);
+
+```
+
+We fit two-way ANCOVA model. All the interactions are significant, so we can't drop them. 
+From the plots, we can see the presense of heteroscedasticity. 
+We also have several leverage points: Indonesia, Afganistan, Saudi Arabia. 
+I use log transformation of the response variable. It solves the problem of non-constant variance, and at the same time the model demonstrates decent fit: R^2 = 0.6591. 
+
+
+##Problem 3
+```{r}
+library(faraway)
+library(lmtest)
+
+boxplot(weight~feed,data=chickwts) 
+
+g = lm(weight~feed, chickwts)
+summary(g)
+plot(g)
+anova(g)
+
+pairwise.t.test(chickwts$weight, chickwts$feed, p.adj="bonferroni")
+
+
+```
+
+From the boxplot, we can see that the weights vary depends on their feed (different means and  variances). 
+
+In general, the model does not violate the assumptions (homoscedasticity, normality of errors). There are some outliers: 53, 54, 68. 
+
+Since model is stat significant, H0: all means are equal is rejected (p-value = 5.936e-10). 
+
+From the parwise t-test, means are not equal for the following pairs:  (casein,horsebean), (linseed, casein), (meatmeal, horsebean), (soybean, casein), (soybean,horsebean), (sunflower, horsebean), (sunflower, linseed), (sunflower,soybean).
